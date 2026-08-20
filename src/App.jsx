@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Home,
   Search,
@@ -15,6 +15,8 @@ import {
   Video,
   X,
 } from 'lucide-react'
+import { supabase } from './lib/supabase'
+import Auth from './Auth'
 import './App.css'
 
 const stories = [
@@ -53,10 +55,51 @@ const suggestions = [
 ]
 
 function App() {
+  const [session, setSession] = useState(null)
+  const [loading, setLoading] = useState(true)
+
   const [liked, setLiked] = useState({})
   const [saved, setSaved] = useState({})
   const [showCreate, setShowCreate] = useState(false)
   const [activeNav, setActiveNav] = useState('Home')
+
+  // Supabase session handling
+  useEffect(() => {
+    let mounted = true
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (mounted) {
+        setSession(session)
+        setLoading(false)
+      }
+    })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+      setLoading(false)
+    })
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [])
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="app-loading">
+        Loading Xenova...
+      </div>
+    )
+  }
+
+  // Not logged in → Auth screen
+  if (!session) {
+    return <Auth />
+  }
 
   const toggleLike = (index) => {
     setLiked((current) => ({
